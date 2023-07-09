@@ -1,0 +1,98 @@
+`include "alucodes.sv"
+`include "opcodes.sv"
+module controlPath
+    #(
+        parameter n = 8,        // Data bus width
+        parameter A_SIZE = 3,   // ALU function width
+        parameter O_SIZE = 6,   // OpCode width
+        parameter P_SIZE = 5,   // Program memory address width
+        parameter R_SIZE = 3,   // GPR address width
+
+        // Instruction = opCode(O) + destAddr(R) + sourceAddr/imm(N)
+        parameter I_SIZE = O_SIZE + R_SIZE + n
+    )
+    (
+        // Outputs
+        // Demo
+        output wire [(P_SIZE-1):0] displayPC,
+        output wire [(O_SIZE-1):0] displayOpCode,
+        // Control
+        output logic [1:0] ALUfunc,
+        output wire imm,
+        output wire immswitches,
+        // Data
+        output wire [(R_SIZE-1):0] Raddr1,
+        output wire [(n-1):0] Raddr2,
+
+        // Inputs
+        // Demo
+        input wire [9:0] SW,
+
+        // Clock
+        input wire clk
+    );
+
+    
+    // Instruction wires
+    wire [(I_SIZE-1):0] I;
+    logic [5:0] opcode;
+    assign {opcode, Raddr1, Raddr2} = I;
+
+    // Program counter IO
+    wire PCincr;
+    wire [(P_SIZE-1):0] PCout;
+
+    // Demo
+    assign displayPC = PCout;
+    assign displayOpCode = opcode;
+
+
+    // Program counter instance
+    pc
+        #(
+            .P_SIZE(P_SIZE)
+        ) pc
+        (
+            // Outputs
+            .PCout(PCout),
+
+            // Inputs
+            .PCincr(PCincr),
+            .clk(clk)
+        );
+
+
+    // Program memory instance
+    prog
+        #(
+            .I_SIZE(I_SIZE),
+            .P_SIZE(P_SIZE)
+        ) pm
+        (
+            // Outputs
+            .I(I),
+
+            // Inputs
+            .address(PCout)
+        );
+
+
+    // Decoder instance
+    decoder
+        #(
+            .A_SIZE(A_SIZE),
+            .O_SIZE(O_SIZE)
+        ) de
+        (
+            // Outputs
+            .ALUfunc(ALUfunc),
+            .imm(imm),
+            .immswitches(immswitches),
+            .PCincr(PCincr),
+            
+            // Inputs
+            .opcode(opcode),
+            .SW8(SW[8])
+        );
+
+endmodule
